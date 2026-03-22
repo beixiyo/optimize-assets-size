@@ -1,8 +1,8 @@
 # optimize-assets-size
 
-栅格图体积优化工具：压缩 / 转 WebP / 自动重写 import 路径。
+栅格图体积优化工具：压缩 / 转 WebP / 自动重写 import 路径
 
-直接写回源文件以减小 Git 体积（与 Vite 构建期 imagetools 等无关）。
+直接写回源文件以减小 Git 体积（与 Vite 构建期 imagetools 等无关）
 
 [English](./README.en.md) | **中文**
 
@@ -35,20 +35,20 @@ npx optimize-assets-size --dirs=src/assets,public [options]
 
 ```bash
 # 预览压缩效果
-npx optimize-assets-size --dirs=src/assets --dry-run
+npx optimize-assets-size --dirs=src --dry-run
 
 # 转 WebP + 自动重写 import（从 tsconfig 读取 alias）
-npx optimize-assets-size --dirs=src/assets,public \
+npx optimize-assets-size --dirs=src,public \
   --tsconfig=tsconfig.app.json \
   --to-webp --rewrite-imports
 
 # 手动指定 alias 映射（优先级高于 tsconfig）
-npx optimize-assets-size --dirs=src/assets \
+npx optimize-assets-size --dirs=src \
   --alias "@/=src,hooks=../hooks/src" \
   --to-webp --rewrite-imports
 
 # 限制最大宽度为 1920px
-npx optimize-assets-size --dirs=src/assets --max-width=1920
+npx optimize-assets-size --dirs=src --max-width=1920
 ```
 
 ### Alias 解析优先级

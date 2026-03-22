@@ -35,20 +35,20 @@ npx optimize-assets-size --dirs=src/assets,public [options]
 
 ```bash
 # Preview compression results
-npx optimize-assets-size --dirs=src/assets --dry-run
+npx optimize-assets-size --dirs=src --dry-run
 
 # Convert to WebP + auto-rewrite imports (reads alias from tsconfig)
-npx optimize-assets-size --dirs=src/assets,public \
+npx optimize-assets-size --dirs=src,public \
   --tsconfig=tsconfig.app.json \
   --to-webp --rewrite-imports
 
 # Manual alias mapping (overrides tsconfig)
-npx optimize-assets-size --dirs=src/assets \
+npx optimize-assets-size --dirs=src \
   --alias "@/=src,hooks=../hooks/src" \
   --to-webp --rewrite-imports
 
 # Limit max width to 1920px
-npx optimize-assets-size --dirs=src/assets --max-width=1920
+npx optimize-assets-size --dirs=src --max-width=1920
 ```
 
 ### Alias Resolution Priority

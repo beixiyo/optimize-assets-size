@@ -1,7 +1,7 @@
 {
   "name": "@jl-org/optimize-assets-size",
   "version": "0.0.1",
-  "description": "栅格图体积优化：压缩 / 转 WebP / 自动重写 import 路径",
+  "description": "Raster image optimization: compress, WebP conversion, auto-rewrite import paths | 栅格图体积优化：压缩、转 WebP、自动重写 import 路径",
   "type": "module",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
