@@ -1,0 +1,63 @@
+{
+  "name": "@jl-org/optimize-assets-size",
+  "version": "0.0.1",
+  "description": "栅格图体积优化：压缩 / 转 WebP / 自动重写 import 路径",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/typings/index.d.ts",
+  "bin": {
+    "optimize-assets-size": "dist/bin.js"
+  },
+  "files": [
+    "/dist"
+  ],
+  "exports": {
+    ".": {
+      "require": {
+        "types": "./dist/typings/index.d.ts",
+        "default": "./dist/index.cjs"
+      },
+      "import": {
+        "types": "./dist/typings/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "scripts": {
+    "build": "rm -rf dist && bun run build:js && bun run build:dts",
+    "build:js": "bun run scripts/build-js.ts",
+    "build:dts": "tsc --emitDeclarationOnly",
+    "prepublishOnly": "bun run build",
+    "test": "bun test"
+  },
+  "peerDependencies": {
+    "sharp": ">=0.33.0"
+  },
+  "peerDependenciesMeta": {
+    "sharp": {
+      "optional": false
+    }
+  },
+  "dependencies": {
+    "@jl-org/log": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.11",
+    "sharp": "^0.34.0",
+    "typescript": "~5.9.3"
+  },
+  "keywords": [
+    "image",
+    "optimize",
+    "webp",
+    "sharp",
+    "compress",
+    "assets"
+  ],
+  "author": "CJL <2662442385@qq.com>",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}
