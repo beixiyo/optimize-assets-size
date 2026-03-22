@@ -9,7 +9,7 @@
 ## 安装
 
 ```bash
-pnpm add optimize-assets-size sharp -D
+pnpm add @jl-org/optimize-assets-size sharp -D
 ```
 
 ## CLI 用法

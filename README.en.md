@@ -9,7 +9,7 @@ Writes back to source files directly to reduce Git repository size (unrelated to
 ## Install
 
 ```bash
-pnpm add optimize-assets-size sharp -D
+pnpm add @jl-org/optimize-assets-size sharp -D
 ```
 
 ## CLI Usage
