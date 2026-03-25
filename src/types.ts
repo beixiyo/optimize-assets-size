@@ -3,9 +3,14 @@ export interface OptimizeConfig {
   dirs: string[]
   dryRun: boolean
   force: boolean
-  toWebp: boolean
   rewriteImports: boolean
   maxWidth: number | null
+  /**
+   * 参与体积优选的额外输出格式（已归一为带点扩展名，如 `.webp`）。
+   * 始终会与「同格式重压缩」一起做候选；空数组表示只做同格式、不尝试转其它格式。
+   * CLI 未传 `--formats` 时默认 `['.webp', '.png']`。
+   */
+  formatAllowlist: string[]
   /** 解析后的 alias 映射：prefix → absolutePath */
   aliasPaths: Map<string, string>
 }

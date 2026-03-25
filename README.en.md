@@ -1,6 +1,6 @@
 # optimize-assets-size
 
-Raster image size optimization tool: compress / convert to WebP / auto-rewrite import paths.
+Raster image size optimization tool: auto-pick smallest JPEG/PNG/WebP/AVIF encoding, auto-rewrite import paths.
 
 Writes back to source files directly to reduce Git repository size (unrelated to Vite build-time imagetools).
 
@@ -27,9 +27,10 @@ npx optimize-assets-size --dirs=src/assets,public [options]
 | `--alias kv` | KV mapping to override alias (highest priority), e.g. `@/=src,hooks=lib` | - |
 | `--dry-run` | Preview mode, no files written | `false` |
 | `--force` | Force overwrite (even if compressed size is larger) | `false` |
-| `--to-webp` | Convert non-webp files to .webp and delete originals | `false` |
 | `--rewrite-imports` | Auto-replace alias paths in source code | `false` |
 | `--max-width=N` | Max width constraint (>= 16) | No limit |
+| `--formats=a,b` | Extra output formats to try (with same-format recompress): `webp` / `png` / `jpg` / `jpeg` / `avif` | `webp,png` |
+| `--formats=` | Empty: no cross-format encodes, **only** same-format recompression | - |
 
 ### Examples
 
@@ -37,18 +38,24 @@ npx optimize-assets-size --dirs=src/assets,public [options]
 # Preview compression results
 npx optimize-assets-size --dirs=src --dry-run
 
-# Convert to WebP + auto-rewrite imports (reads alias from tsconfig)
+# Auto-pick encoding + rewrite imports (reads alias from tsconfig when extension changes)
 npx optimize-assets-size --dirs=src,public \
   --tsconfig=tsconfig.app.json \
-  --to-webp --rewrite-imports
+  --rewrite-imports
 
 # Manual alias mapping (overrides tsconfig)
 npx optimize-assets-size --dirs=src \
   --alias "@/=src,hooks=../hooks/src" \
-  --to-webp --rewrite-imports
+  --rewrite-imports
 
 # Limit max width to 1920px
 npx optimize-assets-size --dirs=src --max-width=1920
+
+# Only consider webp / avif vs same-format
+npx optimize-assets-size --dirs=src --formats=webp,avif
+
+# Same-format only, no conversion
+npx optimize-assets-size --dirs=src --formats=
 ```
 
 ### Alias Resolution Priority
@@ -60,6 +67,7 @@ npx optimize-assets-size --dirs=src --max-width=1920
 
 ```ts
 import {
+  chooseBestRasterEncoding,
   collectRasterFiles,
   computeAliasRewrites,
   encodeWebp,
@@ -75,14 +83,24 @@ const aliasPaths = resolveAliasPaths(null, 'tsconfig.app.json')
 // Collect all raster image files
 const files = await collectRasterFiles(['src/assets'])
 
-// Compress a single file (same format)
 const buf = fs.readFileSync('photo.jpg')
+
+// Same-format compress
 const optimized = await optimizeSameFormat(buf, '.jpg', 1920)
 
-// Convert to WebP
+// Default compares same-format with webp + png; [] means same-format only
+const best = await chooseBestRasterEncoding(buf, '.jpg', 1920)
+const bestAvif = await chooseBestRasterEncoding(buf, '.jpg', 1920, {
+  formatAllowlist: ['webp', 'avif'],
+})
+const sameOnly = await chooseBestRasterEncoding(buf, '.jpg', 1920, {
+  formatAllowlist: [],
+})
+
+// WebP only (programmatic API)
 const webp = await encodeWebp(buf, 1920)
 
-// Compute import path rewrite pairs
+// Import path rewrites (use best.outExt for the target path)
 const rewrites = computeAliasRewrites(
   '/project/src/assets/logo.png',
   '/project/src/assets/logo.webp',

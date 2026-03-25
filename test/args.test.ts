@@ -11,10 +11,9 @@ describe('parseArgs', () => {
   })
 
   it('解析布尔开关', () => {
-    const config = parseArgs(['--dirs=src', '--dry-run', '--force', '--to-webp', '--rewrite-imports'])
+    const config = parseArgs(['--dirs=src', '--dry-run', '--force', '--rewrite-imports'])
     expect(config.dryRun).toBe(true)
     expect(config.force).toBe(true)
-    expect(config.toWebp).toBe(true)
     expect(config.rewriteImports).toBe(true)
   })
 
@@ -22,8 +21,27 @@ describe('parseArgs', () => {
     const config = parseArgs(['--dirs=src'])
     expect(config.dryRun).toBe(false)
     expect(config.force).toBe(false)
-    expect(config.toWebp).toBe(false)
     expect(config.rewriteImports).toBe(false)
+  })
+
+  it('未传 --formats 时默认 webp + png', () => {
+    const config = parseArgs(['--dirs=src'])
+    expect(config.formatAllowlist).toEqual(['.webp', '.png'])
+  })
+
+  it('--formats= 空为不改变格式（仅同格式候选）', () => {
+    const config = parseArgs(['--dirs=src', '--formats='])
+    expect(config.formatAllowlist).toEqual([])
+  })
+
+  it('解析 --formats=webp,avif', () => {
+    const config = parseArgs(['--dirs=src', '--formats=webp,avif'])
+    expect(config.formatAllowlist).toEqual(['.webp', '.avif'])
+  })
+
+  it('解析 --formats 空格形式', () => {
+    const config = parseArgs(['--dirs=src', '--formats', 'png,jpg'])
+    expect(config.formatAllowlist).toEqual(['.png', '.jpg'])
   })
 
   it('解析 --max-width', () => {

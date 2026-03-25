@@ -1,6 +1,7 @@
 import type { OptimizeConfig } from './types'
 import { resolveAliasPaths } from './alias'
 import { logger, resolveFromCwd } from './utils'
+import { normalizeFormatAllowlistTokens } from './optimizer'
 
 /**
  * 解析 CLI 参数
@@ -11,19 +12,20 @@ import { logger, resolveFromCwd } from './utils'
  *   --tsconfig=path          可选，指定 tsconfig 路径读取 paths；未指定时自动查找
  *   --dry-run               预览模式
  *   --force                 强制覆盖
- *   --to-webp               转为 webp
  *   --rewrite-imports       替换源码中的 alias 路径
  *   --max-width=N           限制最大宽度
+ *   --formats=a,b           可选，参与优选的额外格式（webp|png|jpg|jpeg|avif）；未传默认 webp,png；`--formats=` 空值为仅同格式
  */
 export function parseArgs(argv: string[]): OptimizeConfig {
   const dryRun = argv.includes('--dry-run')
   const force = argv.includes('--force')
-  const toWebp = argv.includes('--to-webp')
   const rewriteImports = argv.includes('--rewrite-imports')
   let maxWidth: number | null = null
   let dirsRaw = ''
   let aliasRaw: string | null = null
   let tsconfigRaw: string | null = null
+  /** `undefined` 表示未出现 `--formats`，用默认 webp+png */
+  let formatsRaw: string | undefined = undefined
 
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -35,6 +37,12 @@ export function parseArgs(argv: string[]): OptimizeConfig {
     }
     else if (a.startsWith('--dirs=')) {
       dirsRaw = a.slice('--dirs='.length)
+    }
+    else if (a.startsWith('--formats=')) {
+      formatsRaw = a.slice('--formats='.length)
+    }
+    else if (a === '--formats' && argv[i + 1] && !argv[i + 1].startsWith('--')) {
+      formatsRaw = argv[++i]
     }
     else if (a === '--alias' && argv[i + 1]) {
       aliasRaw = argv[++i]
@@ -63,5 +71,11 @@ export function parseArgs(argv: string[]): OptimizeConfig {
     ? resolveAliasPaths(aliasRaw, tsconfigRaw)
     : new Map()
 
-  return { dirs, dryRun, force, toWebp, rewriteImports, maxWidth, aliasPaths }
+  const formatTokens = formatsRaw === undefined
+    ? ['webp', 'png']
+    : formatsRaw.split(',').map(s => s.trim()).filter(Boolean)
+
+  const formatAllowlist = normalizeFormatAllowlistTokens(formatTokens)
+
+  return { dirs, dryRun, force, rewriteImports, maxWidth, formatAllowlist, aliasPaths }
 }
