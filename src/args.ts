@@ -1,4 +1,6 @@
 import type { OptimizeConfig } from './types'
+import os from 'node:os'
+import path from 'node:path'
 import { resolveAliasPaths } from './alias'
 import { logger, resolveFromCwd } from './utils'
 import { normalizeFormatAllowlistTokens } from './optimizer'
@@ -12,6 +14,8 @@ import { normalizeFormatAllowlistTokens } from './optimizer'
  *   --tsconfig=path          可选，指定 tsconfig 路径读取 paths；未指定时自动查找
  *   --dry-run               预览模式
  *   --force                 强制覆盖
+ *   --no-cache              禁用本地缓存
+ *   --cache-dir=path        自定义缓存目录（默认系统临时目录）
  *   --rewrite-imports       替换源码中的 alias 路径
  *   --max-width=N           限制最大宽度
  *   --formats=a,b           可选，参与优选的额外格式（webp|png|jpg|jpeg|avif）；未传默认 webp,png；`--formats=` 空值为仅同格式
@@ -19,10 +23,12 @@ import { normalizeFormatAllowlistTokens } from './optimizer'
 export function parseArgs(argv: string[]): OptimizeConfig {
   const dryRun = argv.includes('--dry-run')
   const force = argv.includes('--force')
+  const cache = !argv.includes('--no-cache')
   const rewriteImports = argv.includes('--rewrite-imports')
   let maxWidth: number | null = null
   let dirsRaw = ''
   let aliasRaw: string | null = null
+  let cacheDirRaw: string | null = null
   let tsconfigRaw: string | null = null
   /** `undefined` 表示未出现 `--formats`，用默认 webp+png */
   let formatsRaw: string | undefined = undefined
@@ -40,6 +46,12 @@ export function parseArgs(argv: string[]): OptimizeConfig {
     }
     else if (a.startsWith('--formats=')) {
       formatsRaw = a.slice('--formats='.length)
+    }
+    else if (a.startsWith('--cache-dir=')) {
+      cacheDirRaw = a.slice('--cache-dir='.length)
+    }
+    else if (a === '--cache-dir' && argv[i + 1]) {
+      cacheDirRaw = argv[++i]
     }
     else if (a === '--formats' && argv[i + 1] && !argv[i + 1].startsWith('--')) {
       formatsRaw = argv[++i]
@@ -76,6 +88,7 @@ export function parseArgs(argv: string[]): OptimizeConfig {
     : formatsRaw.split(',').map(s => s.trim()).filter(Boolean)
 
   const formatAllowlist = normalizeFormatAllowlistTokens(formatTokens)
+  const cacheDir = resolveFromCwd(cacheDirRaw || path.join(os.tmpdir(), 'optimize-assets-size'))
 
-  return { dirs, dryRun, force, rewriteImports, maxWidth, formatAllowlist, aliasPaths }
+  return { dirs, dryRun, force, cache, cacheDir, rewriteImports, maxWidth, formatAllowlist, aliasPaths }
 }

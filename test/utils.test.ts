@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { describe, expect, it } from 'bun:test'
-import { formatKb, relForLog, resolveFromCwd } from '../src/utils'
+import { formatKb, relForLog, resolveFromCwd, toProjectRelativePath } from '../src/utils'
 
 describe('resolveFromCwd', () => {
   it('空字符串返回空', () => {
@@ -51,5 +51,12 @@ describe('formatKb', () => {
   it('保留两位小数', () => {
     expect(formatKb(1000)).toBe('0.98 kB')
     expect(formatKb(0)).toBe('0.00 kB')
+  })
+})
+
+describe('toProjectRelativePath', () => {
+  it('返回项目内相对路径并统一分隔符', () => {
+    const abs = path.resolve(process.cwd(), 'test/foo.png')
+    expect(toProjectRelativePath(abs)).toBe('test/foo.png')
   })
 })

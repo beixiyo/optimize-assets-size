@@ -29,3 +29,7 @@ export function relForLog(absPath: string): string {
 export function formatKb(n: number): string {
   return `${(n / 1024).toFixed(2)} kB`
 }
+
+export function toProjectRelativePath(absPath: string): string {
+  return normalizeDisplayPath(path.relative(process.cwd(), absPath))
+}

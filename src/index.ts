@@ -1,6 +1,13 @@
 export { parseAliasKv, resolveAliasPaths, stripJsonComments } from './alias'
 export { parseArgs } from './args'
 export {
+  buildCacheKey,
+  createFileSnapshot,
+  getDefaultCacheRoot,
+  isSnapshotMatch,
+  loadOptimizeCache,
+} from './cache'
+export {
   chooseBestRasterEncoding,
   DEFAULT_FORMAT_ALLOWLIST_EXTENSIONS,
   encodeWebp,

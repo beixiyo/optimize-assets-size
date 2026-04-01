@@ -1,4 +1,5 @@
 import path from 'node:path'
+import os from 'node:os'
 import { describe, expect, it } from 'bun:test'
 import { parseArgs } from '../src/args'
 
@@ -14,6 +15,7 @@ describe('parseArgs', () => {
     const config = parseArgs(['--dirs=src', '--dry-run', '--force', '--rewrite-imports'])
     expect(config.dryRun).toBe(true)
     expect(config.force).toBe(true)
+    expect(config.cache).toBe(true)
     expect(config.rewriteImports).toBe(true)
   })
 
@@ -22,6 +24,21 @@ describe('parseArgs', () => {
     expect(config.dryRun).toBe(false)
     expect(config.force).toBe(false)
     expect(config.rewriteImports).toBe(false)
+  })
+
+  it('解析 --no-cache', () => {
+    const config = parseArgs(['--dirs=src', '--no-cache'])
+    expect(config.cache).toBe(false)
+  })
+
+  it('默认缓存目录在系统临时目录下', () => {
+    const config = parseArgs(['--dirs=src'])
+    expect(config.cacheDir).toBe(path.resolve(os.tmpdir(), 'optimize-assets-size'))
+  })
+
+  it('解析 --cache-dir', () => {
+    const config = parseArgs(['--dirs=src', '--cache-dir=.cache/assets'])
+    expect(config.cacheDir).toBe(path.resolve(process.cwd(), '.cache/assets'))
   })
 
   it('未传 --formats 时默认 webp + png', () => {

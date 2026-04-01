@@ -1,6 +1,6 @@
 {
   "name": "@jl-org/optimize-assets-size",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Raster image optimization: auto pick smallest JPEG/PNG/WebP/AVIF encoding, rewrite imports | 栅格图体积优化：自动优选编码、重写 import 路径",
   "type": "module",
   "main": "dist/index.cjs",

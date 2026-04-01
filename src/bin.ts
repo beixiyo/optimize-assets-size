@@ -22,9 +22,10 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 import { parseArgs } from './args'
+import { createFileSnapshot, isSnapshotMatch, loadOptimizeCache } from './cache'
 import { chooseBestRasterEncoding } from './optimizer'
 import { applyImportRewrites, computeAliasRewrites } from './rewriter'
-import { formatKb, logger, relForLog } from './utils'
+import { formatKb, logger, relForLog, toProjectRelativePath } from './utils'
 import { collectRasterFiles } from './walker'
 
 async function assertDirsExist(dirs: string[]): Promise<void> {
@@ -46,9 +47,10 @@ async function assertDirsExist(dirs: string[]): Promise<void> {
 async function main(): Promise<void> {
   const argv = process.argv.slice(2)
   const config = parseArgs(argv)
-  const { dirs, dryRun, force, rewriteImports, maxWidth, formatAllowlist, aliasPaths } = config
+  const { dirs, dryRun, force, cache, cacheDir, rewriteImports, maxWidth, formatAllowlist, aliasPaths } = config
 
   await assertDirsExist(dirs)
+  const optimizeCache = await loadOptimizeCache(config)
 
   if (maxWidth)
     logger.info(`--max-width=${maxWidth}`)
@@ -59,6 +61,7 @@ async function main(): Promise<void> {
   )
   logger.info(`cwd ${process.cwd()}`)
   logger.info(`dirs → ${dirs.map(d => relForLog(d)).join(', ')}`)
+  logger.info(cache ? `cache: ${relForLog(cacheDir)}` : 'cache: disabled')
   if (rewriteImports && aliasPaths.size > 0) {
     const aliasStr = [...aliasPaths.entries()]
       .map(([k, v]) => `${k} → ${relForLog(v)}`)
@@ -73,12 +76,26 @@ async function main(): Promise<void> {
 
   let changed = 0
   let skipped = 0
+  let cacheHits = 0
+  let totalBeforeBytes = 0
+  let totalAfterBytes = 0
 
   for (const filePath of files) {
+    const rel = relForLog(filePath)
+    const cacheKey = toProjectRelativePath(filePath)
+    const beforeStat = await fs.stat(filePath)
+    const beforeSnapshot = createFileSnapshot(beforeStat)
+
+    if (optimizeCache && isSnapshotMatch(beforeSnapshot, optimizeCache.get(cacheKey))) {
+      skipped++
+      cacheHits++
+      logger.info(`${rel.padEnd(56)} 跳过（缓存命中）`)
+      continue
+    }
+
     const buf = await fs.readFile(filePath)
     const ext = path.extname(filePath)
     const lo = ext.toLowerCase()
-    const rel = relForLog(filePath)
 
     let picked: { buffer: Buffer, outExt: string } | null
     try {
@@ -100,6 +117,7 @@ async function main(): Promise<void> {
 
     if (after >= before && !force) {
       skipped++
+      optimizeCache?.set(cacheKey, beforeSnapshot)
       logger.warn(
         `${rel.padEnd(56)} 跳过（最优仍 ≥ 原文件；加 --force 写入） ${formatKb(before)} → ${formatKb(after)}`,
       )
@@ -108,6 +126,8 @@ async function main(): Promise<void> {
 
     if (sameFile) {
       changed++
+      totalBeforeBytes += before
+      totalAfterBytes += after
       const pct = before === 0
         ? 0
         : Math.round((1 - after / before) * 100)
@@ -115,8 +135,14 @@ async function main(): Promise<void> {
       logger.success(
         `${rel.padEnd(56)} ${smaller ? `-${pct}%` : 'force'}  ${formatKb(before)} → ${formatKb(after)}`,
       )
-      if (!dryRun)
+      if (!dryRun) {
         await fs.writeFile(filePath, picked.buffer)
+        const afterStat = await fs.stat(filePath)
+        optimizeCache?.set(cacheKey, createFileSnapshot(afterStat))
+      }
+      else {
+        optimizeCache?.set(cacheKey, beforeSnapshot)
+      }
       continue
     }
 
@@ -136,11 +162,14 @@ async function main(): Promise<void> {
     }
     if (existsTarget && !force) {
       skipped++
+      optimizeCache?.set(cacheKey, beforeSnapshot)
       logger.warn(`${rel.padEnd(56)} 跳过（已存在 ${path.basename(targetPath)}，加 --force 覆盖）`)
       continue
     }
 
     changed++
+    totalBeforeBytes += before
+    totalAfterBytes += after
     const pct = before === 0
       ? 0
       : Math.round((1 - after / before) * 100)
@@ -152,6 +181,12 @@ async function main(): Promise<void> {
     if (!dryRun) {
       await fs.writeFile(targetPath, picked.buffer)
       await fs.unlink(filePath)
+      const targetStat = await fs.stat(targetPath)
+      optimizeCache?.delete(cacheKey)
+      optimizeCache?.set(toProjectRelativePath(targetPath), createFileSnapshot(targetStat))
+    }
+    else {
+      optimizeCache?.set(cacheKey, beforeSnapshot)
     }
 
     if (rewriteImports) {
@@ -162,12 +197,18 @@ async function main(): Promise<void> {
   }
 
   logger.newLine()
+  if (changed > 0) {
+    const savedBytes = totalBeforeBytes - totalAfterBytes
+    const summaryPrefix = dryRun ? '[dry-run] ' : ''
+    logger.info(`${summaryPrefix}累计节省 ${formatKb(savedBytes)}；压缩前/后 ${formatKb(totalBeforeBytes)} → ${formatKb(totalAfterBytes)}`)
+  }
+
   if (dryRun && changed > 0)
-    logger.info(`[dry-run] 本会处理 ${changed} 个资源；跳过 ${skipped} 个`)
+    logger.info(`[dry-run] 本会处理 ${changed} 个资源；跳过 ${skipped} 个（缓存命中 ${cacheHits}）`)
   else if (changed > 0)
-    logger.success(`已处理 ${changed} 个资源；跳过 ${skipped} 个`)
+    logger.success(`已处理 ${changed} 个资源；跳过 ${skipped} 个（缓存命中 ${cacheHits}）`)
   else
-    logger.info(`无资源被更新；跳过 ${skipped} 个`)
+    logger.info(`无资源被更新；跳过 ${skipped} 个（缓存命中 ${cacheHits}）`)
 
   if (rewriteImports && (allAliasRewrites.length > 0 || relativeAssetMoves.length > 0)) {
     logger.newLine()
@@ -176,6 +217,8 @@ async function main(): Promise<void> {
   else if (rewriteImports && allAliasRewrites.length === 0 && relativeAssetMoves.length === 0) {
     logger.info('无可重写的资源路径，跳过路径替换')
   }
+
+  await optimizeCache?.save()
 }
 
 main().catch((e) => {

@@ -3,6 +3,8 @@ export interface OptimizeConfig {
   dirs: string[]
   dryRun: boolean
   force: boolean
+  cache: boolean
+  cacheDir: string
   rewriteImports: boolean
   maxWidth: number | null
   /**
