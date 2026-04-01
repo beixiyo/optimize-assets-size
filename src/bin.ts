@@ -68,7 +68,8 @@ async function main(): Promise<void> {
   logger.newLine()
 
   const files = await collectRasterFiles(dirs)
-  const allRewrites: { from: string, to: string }[] = []
+  const allAliasRewrites: { from: string, to: string }[] = []
+  const relativeAssetMoves: { oldPath: string, newPath: string }[] = []
 
   let changed = 0
   let skipped = 0
@@ -155,7 +156,8 @@ async function main(): Promise<void> {
 
     if (rewriteImports) {
       const rewrites = computeAliasRewrites(filePath, targetPath, aliasPaths)
-      allRewrites.push(...rewrites)
+      allAliasRewrites.push(...rewrites)
+      relativeAssetMoves.push({ oldPath: filePath, newPath: targetPath })
     }
   }
 
@@ -167,12 +169,12 @@ async function main(): Promise<void> {
   else
     logger.info(`无资源被更新；跳过 ${skipped} 个`)
 
-  if (rewriteImports && allRewrites.length > 0) {
+  if (rewriteImports && (allAliasRewrites.length > 0 || relativeAssetMoves.length > 0)) {
     logger.newLine()
-    await applyImportRewrites(allRewrites, dryRun, dirs)
+    await applyImportRewrites(allAliasRewrites, dryRun, dirs, relativeAssetMoves)
   }
-  else if (rewriteImports && allRewrites.length === 0) {
-    logger.info('无匹配 alias 的改路径资源，跳过路径替换')
+  else if (rewriteImports && allAliasRewrites.length === 0 && relativeAssetMoves.length === 0) {
+    logger.info('无可重写的资源路径，跳过路径替换')
   }
 }
 

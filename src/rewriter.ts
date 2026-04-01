@@ -37,30 +37,59 @@ export function computeAliasRewrites(
   return rewrites
 }
 
+function normalizeImportPath(filePath: string): string {
+  const normalized = filePath.split(path.sep).join('/')
+  if (normalized.startsWith('.'))
+    return normalized
+  return `./${normalized}`
+}
+
+/**
+ * 基于源码文件位置，计算相对路径 import 的替换对
+ */
+export function computeRelativeRewrite(
+  importerFile: string,
+  oldPath: string,
+  newPath: string,
+): { from: string, to: string } {
+  const importerDir = path.dirname(importerFile)
+  const from = normalizeImportPath(path.relative(importerDir, oldPath))
+  const to = normalizeImportPath(path.relative(importerDir, newPath))
+  return { from, to }
+}
+
 /**
  * 批量替换源码文件中的 import 路径
  */
 export async function applyImportRewrites(
-  pairs: { from: string, to: string }[],
+  aliasPairs: { from: string, to: string }[],
   dryRun: boolean,
   codeScanRoots: string[],
+  relativeAssetMoves: { oldPath: string, newPath: string }[] = [],
 ): Promise<void> {
-  if (pairs.length === 0)
+  if (aliasPairs.length === 0 && relativeAssetMoves.length === 0)
     return
 
   /** 去重 */
   const seen = new Map<string, string>()
-  for (const { from, to } of pairs)
+  for (const { from, to } of aliasPairs)
     seen.set(from, to)
-  const unique = [...seen.entries()].map(([from, to]) => ({ from, to }))
+  const uniqueAliasPairs = [...seen.entries()].map(([from, to]) => ({ from, to }))
 
   let touched = 0
   for (const root of codeScanRoots) {
     for await (const file of walkCodeFiles(root)) {
       let text = await fs.readFile(file, 'utf8')
       const orig = text
-      for (const { from, to } of unique)
+
+      for (const { from, to } of uniqueAliasPairs)
         text = text.split(from).join(to)
+
+      for (const { oldPath, newPath } of relativeAssetMoves) {
+        const { from, to } = computeRelativeRewrite(file, oldPath, newPath)
+        text = text.split(from).join(to)
+      }
+
       if (text !== orig) {
         touched++
         if (!dryRun)
@@ -74,5 +103,5 @@ export async function applyImportRewrites(
 
   logger.success(`${dryRun
     ? '[dry-run] '
-    : ''}共更新 ${touched} 个源码文件中的 alias 路径`)
+    : ''}共更新 ${touched} 个源码文件中的资源引用路径`)
 }

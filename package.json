@@ -1,6 +1,6 @@
 {
   "name": "@jl-org/optimize-assets-size",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Raster image optimization: auto pick smallest JPEG/PNG/WebP/AVIF encoding, rewrite imports | 栅格图体积优化：自动优选编码、重写 import 路径",
   "type": "module",
   "main": "dist/index.cjs",
@@ -29,6 +29,7 @@
     "build:js": "bun run scripts/build-js.ts",
     "build:dts": "tsc --emitDeclarationOnly",
     "prepublishOnly": "bun run build",
+    "assets:optimize": "bun run ./dist/bin.js --dirs=./test --rewrite-imports",
     "test": "bun test"
   },
   "peerDependencies": {
@@ -44,6 +45,7 @@
   },
   "devDependencies": {
     "@types/bun": "^1.3.11",
+    "@types/node": "^25.5.0",
     "sharp": "^0.34.0",
     "typescript": "~5.9.3"
   },
