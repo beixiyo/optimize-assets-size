@@ -4,6 +4,10 @@ import { NodeLogger } from '@jl-org/log/node'
 
 export const logger = new NodeLogger({ prefix: 'optimize-assets' })
 
+function normalizeDisplayPath(filePath: string): string {
+  return filePath.replaceAll('\\', '/')
+}
+
 /** 相对路径按 process.cwd() 解析，绝对路径原样返回 */
 export function resolveFromCwd(p: string): string {
   const t = p.trim()
@@ -16,10 +20,10 @@ export function resolveFromCwd(p: string): string {
 
 /** 日志用：优先相对 cwd 的短路径 */
 export function relForLog(absPath: string): string {
-  const fromCwd = path.relative(process.cwd(), absPath)
+  const fromCwd = normalizeDisplayPath(path.relative(process.cwd(), absPath))
   if (fromCwd && !fromCwd.startsWith('..') && !path.isAbsolute(fromCwd))
     return fromCwd
-  return absPath
+  return normalizeDisplayPath(absPath)
 }
 
 export function formatKb(n: number): string {

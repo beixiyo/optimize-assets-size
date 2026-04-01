@@ -30,6 +30,11 @@ describe('relForLog', () => {
     expect(relForLog(abs)).toBe('src/foo.png')
   })
 
+  it('Windows 风格路径统一输出正斜杠', () => {
+    const abs = 'C:\\Code\\FrontEnd\\optimize-assets-size\\src\\foo.png'
+    expect(relForLog(abs)).toBe('C:/Code/FrontEnd/optimize-assets-size/src/foo.png')
+  })
+
   it('cwd 外的路径返回绝对路径', () => {
     const abs = '/some/other/path/file.png'
     expect(relForLog(abs)).toBe(abs)
